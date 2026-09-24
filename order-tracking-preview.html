@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Order Tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Inter:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{--bg:#F5F4F1;--card:#fff;--ink:#1B1D21;--muted:#6B6963;--border:#E4E2DC;--accent:#2F6F62;--tint:#E3EEEA;--shadow:rgba(27,29,33,.16);
+    box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121412;--card:#1C1F1D;--ink:#ECEBE6;--muted:#A3A19A;--border:#30342F;--accent:#5FB3A1;--tint:#1E302B;--shadow:rgba(0,0,0,.5);}}
+  :root[data-theme="dark"]{--bg:#121412;--card:#1C1F1D;--ink:#ECEBE6;--muted:#A3A19A;--border:#30342F;--accent:#5FB3A1;--tint:#1E302B;--shadow:rgba(0,0,0,.5);}
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  html,body{margin:0;background:var(--bg);font-family:'Inter','Noto Sans Bengali',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  p{margin:0;}
+  button{font-family:inherit;}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .no-scrollbar::-webkit-scrollbar{display:none;}
+  .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const { useState } = React;
+const h = React.createElement;
+
+const STAGES = ["Placed","Packed","Shipped","Out for delivery","Delivered"];
+const TIMELINE = [
+  { label:"Order placed", time:"Mon, 9:02 AM", done:true },
+  { label:"Packed at warehouse", time:"Mon, 2:47 PM", done:true },
+  { label:"Shipped from Dhaka facility", time:"Tue, 7:15 AM", done:true },
+  { label:"Out for delivery", time:"Today, 10:20 AM", done:true, active:true },
+  { label:"Arriving at your door", time:"Predicted 3:40\u20134:10 PM", done:false, predicted:true },
+];
+const ORDER_ITEMS = [
+  { name:"Ceramic pour-over dripper", price:"\u09F3 1,250", kind:"dripper" },
+  { name:"Single-origin beans, 250g", price:"\u09F3 890", kind:"beans" },
+];
+const REORDER_ITEMS = [
+  { name:"Ceramic pour-over filter", price:"\u09F3 640", note:"You buy this monthly", kind:"filter" },
+  { name:"Single-origin beans, 250g", price:"\u09F3 890", note:"Paired with your last order", kind:"beans" },
+];
+
+/* ---------- icons: round caps, aria-hidden ---------- */
+const ic = (size, kids, sw) => h('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:sw||1.8,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':'true',focusable:'false'},...kids);
+const P = d => h('path',{d});
+const ChevronLeft = () => ic(24,[P('M15 18l-6-6 6-6')],2);
+const More = () => h('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'currentColor','aria-hidden':'true'},h('circle',{cx:5,cy:12,r:1.6}),h('circle',{cx:12,cy:12,r:1.6}),h('circle',{cx:19,cy:12,r:1.6}));
+const Sparkle = () => h('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'currentColor','aria-hidden':'true'},h('path',{d:'M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z'}));
+const Pin = () => ic(20,[P('M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z'),h('circle',{cx:12,cy:9.5,r:2.5})]);
+const Doc = () => ic(20,[P('M7 3h7l5 5v13H7z'),P('M14 3v5h5'),P('M10 13h6M10 17h6')]);
+const Chat = () => ic(22,[P('M20 15a2 2 0 01-2 2H8l-4 4V6a2 2 0 012-2h12a2 2 0 012 2z')]);
+const XIcon = () => ic(18,[P('M18 6L6 18M6 6l12 12')],2);
+const Box = () => ic(22,[P('M3 7.5L12 3l9 4.5-9 4.5-9-4.5zM3 7.5v9L12 21l9-4.5v-9M12 12v9')]);
+
+/* ---------- product illustrations (inline SVG, no remote images) ---------- */
+function Thumb({kind,size}){
+  const art = {
+    dripper:[
+      h('path',{d:'M15 16h34l-9 20H24z',fill:'#FBF7EE',stroke:'#2F6F62',strokeWidth:2.5,strokeLinejoin:'round'}),
+      h('path',{d:'M21 25h22',stroke:'#2F6F62',strokeWidth:2,strokeLinecap:'round'}),
+      h('rect',{x:22,y:36,width:20,height:4,rx:1.5,fill:'#2F6F62'}),
+      h('path',{d:'M18 42h28v7a7 7 0 01-7 7H25a7 7 0 01-7-7z',fill:'#2F6F62'}),
+      h('path',{d:'M46 45h2a4 4 0 010 8h-2',stroke:'#2F6F62',strokeWidth:2.5,fill:'none',strokeLinecap:'round'}),
+      h('circle',{cx:32,cy:41,r:1.4,fill:'#8FC1B4'})],
+    filter:[
+      h('path',{d:'M14 14h36l-10 30H24z',fill:'#FFFFFF',stroke:'#8A6A4A',strokeWidth:2.5,strokeLinejoin:'round'}),
+      h('path',{d:'M24 14l4 30M32 14v30M40 14l-4 30',stroke:'#D8C6AE',strokeWidth:1.6,strokeLinecap:'round'}),
+      h('ellipse',{cx:32,cy:47,rx:11,ry:4,fill:'#8A6A4A'}),
+      h('rect',{x:21,y:47,width:22,height:6,rx:3,fill:'#6E5238'})],
+    beans:[
+      h('path',{d:'M19 12h26l3 9v29a5 5 0 01-5 5H21a5 5 0 01-5-5V21z',fill:'#7A5230'}),
+      h('path',{d:'M19 12h26l3 9H16z',fill:'#5E3E22'}),
+      h('rect',{x:22,y:29,width:20,height:17,rx:3,fill:'#F4E9D8'}),
+      h('ellipse',{cx:32,cy:37.5,rx:4.5,ry:6,fill:'#7A5230',transform:'rotate(20 32 37.5)'}),
+      h('path',{d:'M30 32.5q3 5 4 10',stroke:'#F4E9D8',strokeWidth:1.4,fill:'none',strokeLinecap:'round'})]
+  }[kind];
+  return h('svg',{width:size,height:size,viewBox:'0 0 64 64',role:'img','aria-hidden':'true',style:{display:'block',flexShrink:0}},
+    h('rect',{width:64,height:64,rx:14,fill:'#EFE6D8'}), ...art);
+}
+
+const card = "0 1px 2px var(--shadow), 0 10px 28px -18px var(--shadow)";
+const cardBox = {borderRadius:16,background:'var(--card)',boxShadow:card,border:'1px solid var(--border)'};
+
+function TopBar(){
+  const btn = {border:'none',background:'none',color:'var(--ink)',padding:8,cursor:'pointer',display:'flex'};
+  return h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 12px'}},
+    h('button',{'aria-label':'Back',style:btn},h(ChevronLeft)),
+    h('p',{style:{fontSize:14,color:'var(--muted)',fontWeight:500}},'Order #48213'),
+    h('button',{'aria-label':'More options',style:btn},h(More))
+  );
+}
+
+function DeliveryHero(){
+  return h('div',{style:{padding:'8px 20px 26px'}},
+    h('p',{style:{fontSize:15,color:'var(--muted)',marginBottom:4}},'Arriving today'),
+    h('h1',{style:{fontFamily:"'Newsreader',Georgia,serif",fontWeight:500,fontSize:42,lineHeight:1.05,margin:0}},'3:40 \u2013 4:10 PM'),
+    h('div',{style:{marginTop:14,display:'inline-flex',alignItems:'center',gap:6,background:'var(--tint)',borderRadius:999,padding:'7px 13px',color:'var(--accent)'}},
+      h(Sparkle), h('span',{style:{fontSize:13,fontWeight:500}},'12 minutes ahead of the original estimate'))
+  );
+}
+
+function ProgressRail(){
+  const cur = 3, n = STAGES.length;
+  return h('div',{style:{padding:'0 20px 28px'},role:'img','aria-label':'Progress: '+STAGES[cur]+', step '+(cur+1)+' of '+n},
+    h('div',{style:{position:'relative'}},
+      h('div',{style:{position:'absolute',top:7,left:'10%',right:'10%',height:2,borderRadius:2,background:'var(--border)'}}),
+      h('div',{style:{position:'absolute',top:7,left:'10%',width:(cur/(n-1)*80)+'%',height:2,borderRadius:2,background:'var(--accent)'}}),
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',position:'relative'}},
+        STAGES.map((s,i)=> h('div',{key:s,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:8}},
+          h('div',{style:{width:16,height:16,borderRadius:999,background:i<=cur?'var(--accent)':'var(--bg)',border:'2px solid '+(i<=cur?'var(--accent)':'var(--border)'),boxShadow:i===cur?'0 0 0 4px var(--tint)':'none'}}),
+          h('span',{style:{fontSize:11.5,lineHeight:1.25,textAlign:'center',fontWeight:i===cur?600:400,color:i<=cur?'var(--ink)':'var(--muted)'}},s)
+        ))
+      )
+    )
+  );
+}
+
+function Timeline(){
+  return h('div',{style:{padding:'0 20px 20px'}},
+    h('div',{style:{...cardBox,padding:20}},
+      TIMELINE.map((e,i)=> h('div',{key:e.label,style:{display:'flex',gap:14}},
+        h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center'}},
+          h('div',{style:{height:12,width:12,borderRadius:999,marginTop:3,flexShrink:0,
+            background:e.predicted?'var(--card)':'var(--accent)',
+            border:e.predicted?'2px solid var(--accent)':'none',
+            boxShadow:e.active?'0 0 0 4px var(--tint)':'none'}}),
+          i<TIMELINE.length-1 && h('div',{style:{width:2,flex:1,margin:'4px 0',minHeight:28,background:e.done&&!e.active?'var(--accent)':'var(--border)',borderRadius:2}})
+        ),
+        h('div',{style:{paddingBottom:i===TIMELINE.length-1?0:20}},
+          h('p',{style:{fontSize:15,fontWeight:e.active?600:400}},e.label),
+          h('p',{style:{fontSize:13,color:e.predicted?'var(--accent)':'var(--muted)',marginTop:2,display:'flex',alignItems:'center',gap:5}},
+            e.predicted && h(Sparkle), e.time)
+        )
+      ))
+    )
+  );
+}
+
+function OrderSummaryCard(){
+  const [open,setOpen] = useState(false);
+  return h('div',{style:{padding:'0 20px 24px'}},
+    h('button',{onClick:()=>setOpen(!open),'aria-expanded':open,style:{...cardBox,width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px',cursor:'pointer',color:'var(--ink)'}},
+      h('div',{style:{display:'flex',alignItems:'center',gap:12}},
+        h('div',{style:{display:'flex'}},
+          h(Thumb,{kind:'dripper',size:44}),
+          h('div',{style:{marginLeft:-12,borderRadius:14,border:'2px solid var(--card)',display:'flex'}},h(Thumb,{kind:'beans',size:44}))
+        ),
+        h('div',{style:{textAlign:'left'}},
+          h('p',{style:{fontSize:15,fontWeight:500}},'2 items \u00B7 \u09F3 2,140'),
+          h('p',{style:{fontSize:13,color:'var(--muted)',marginTop:2}},'Pour-over kit, beans'))
+      ),
+      h('span',{style:{fontSize:13.5,fontWeight:500,color:'var(--accent)'}}, open?'Hide':'View')
+    ),
+    open && h('div',{style:{...cardBox,marginTop:8,padding:'8px 16px'}},
+      ORDER_ITEMS.map((it,i)=> h('div',{key:it.name,style:{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderTop:i?'1px solid var(--border)':'none'}},
+        h(Thumb,{kind:it.kind,size:44}),
+        h('span',{style:{flex:1,fontSize:14}},it.name),
+        h('span',{style:{fontSize:14,color:'var(--muted)'}},it.price)
+      ))
+    )
+  );
+}
+
+function ReorderCarousel(){
+  const [added,setAdded] = useState({});
+  return h('div',{style:{paddingBottom:24}},
+    h('p',{style:{padding:'0 20px',fontSize:14,color:'var(--muted)',marginBottom:12}},'Based on this order, worth restocking'),
+    h('div',{className:'no-scrollbar',style:{display:'flex',gap:12,padding:'0 20px',overflowX:'auto'}},
+      REORDER_ITEMS.map(it=> h('div',{key:it.name,style:{...cardBox,minWidth:176,padding:14,flexShrink:0}},
+        h('div',{style:{marginBottom:12}},h(Thumb,{kind:it.kind,size:84})),
+        h('p',{style:{fontSize:14,fontWeight:500,lineHeight:1.35}},it.name),
+        h('p',{style:{fontSize:12.5,color:'var(--muted)',marginTop:4}},it.note),
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:12}},
+          h('span',{style:{fontSize:14,fontWeight:500}},it.price),
+          h('button',{'aria-label':(added[it.name]?'Added ':'Add ')+it.name,onClick:()=>setAdded({...added,[it.name]:!added[it.name]}),
+            style:{fontSize:13,fontWeight:500,border:'1px solid var(--accent)',borderRadius:999,padding:'5px 14px',cursor:'pointer',
+              color:added[it.name]?'var(--accent)':'#fff',background:added[it.name]?'transparent':'var(--accent)'}},added[it.name]?'Added':'Add')
+        )
+      ))
+    )
+  );
+}
+
+function QuickActionBar(){
+  const actions=[{Icon:Pin,label:'Track on map'},{Icon:Doc,label:'Invoice'}];
+  return h('div',{style:{position:'sticky',bottom:0,background:'var(--bg)',borderTop:'1px solid var(--border)',padding:'12px 20px calc(12px + env(safe-area-inset-bottom,0px))',display:'flex',gap:12}},
+    actions.map(({Icon,label})=> h('button',{key:label,style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8,borderRadius:12,border:'1px solid var(--border)',background:'var(--card)',padding:'12px 0',fontSize:14,fontWeight:500,color:'var(--ink)',cursor:'pointer'}}, h(Icon), label))
+  );
+}
+
+function CopilotChip(){
+  const [open,setOpen]=useState(false);
+  const suggestions=["Where's my order right now?","Can I change the drop-off instructions?"];
+  return h('div',{style:{position:'fixed',bottom:'calc(84px + env(safe-area-inset-bottom,0px))',right:20,zIndex:10,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:12}},
+    open && h('div',{style:{...cardBox,width:250,padding:16}},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}},
+        h('p',{style:{fontSize:14,fontWeight:500}},'Ask about this order'),
+        h('button',{onClick:()=>setOpen(false),'aria-label':'Close',style:{border:'none',background:'none',color:'var(--muted)',cursor:'pointer',display:'flex',padding:4}},h(XIcon))
+      ),
+      h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+        suggestions.map(s=> h('button',{key:s,style:{textAlign:'left',fontSize:13.5,color:'var(--ink)',background:'var(--bg)',border:'none',borderRadius:12,padding:'10px 12px',cursor:'pointer'}},s))
+      )
+    ),
+    h('button',{onClick:()=>setOpen(!open),'aria-label':open?'Close assistant':'Open assistant','aria-expanded':open,style:{height:52,width:52,borderRadius:999,background:'var(--ink)',color:'var(--bg)',border:'none',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px -6px var(--shadow)',cursor:'pointer'}}, open?h(XIcon):h(Chat))
+  );
+}
+
+function OrderTrackingScreen(){
+  return h('div',{style:{minHeight:'100vh',background:'var(--bg)'}},
+    h('main',{style:{maxWidth:420,margin:'0 auto',position:'relative',minHeight:'100vh',display:'flex',flexDirection:'column'}},
+      h(TopBar), h(DeliveryHero), h(ProgressRail),
+      h('div',{style:{flex:1}}, h(Timeline), h(OrderSummaryCard), h(ReorderCarousel)),
+      h(QuickActionBar), h(CopilotChip)
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(OrderTrackingScreen));
+</script>
+</body>
+</html>

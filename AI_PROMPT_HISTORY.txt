@@ -1,0 +1,31 @@
+
+======================
+Task 1 — Order Tracking Screen
+AI Tool (Used:claude.ai)
+
+--------------------------------------------------
+Prompt 1:
+Build a mobile-first "Order Tracking" screen as a single self-contained HTML file. Style: calm, warm neutral palette with one green accent. Use CSS variables for all colors.
+
+Top bar: back button, order number, more menu
+
+--------------------------------------------------
+Prompt 2:
+
+The product images in this page are empty grey boxes. Replace every placeholder with inline SVG
+--------------------------------------------------
+Prompt 3:
+
+Audit and fix all inline SVG icons in this file
+
+--------------------------------------------------
+Prompt 4: arrival time window in a serif font + a small 
+Progress rail with all 5 stages labelled (Placed, Packed, Shipped, Out for delivery, Delivered)
+Vertical timeline card with a predicted final step
+Collapsible order summary card
+Horizontal "reorder" carousel with product cards
+Sticky bottom action bar (Track on map, Invoice)
+Floating assistant chip that opens a small suggestions panel
+
+
+--------------------------------------------------
